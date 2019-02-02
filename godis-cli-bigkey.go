@@ -1,9 +1,10 @@
 package main
 
 import (
-	"berkshire/rdb"
 	"fmt"
 	"os"
+
+	"github.com/erpeng/godis-cli-bigkey/rdb"
 )
 
 func main() {
