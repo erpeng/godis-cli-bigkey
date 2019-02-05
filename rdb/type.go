@@ -54,6 +54,8 @@ type readFunc func(f *os.File, l uint64)
 var m = map[int]readFunc{
 	RDB_TYPE_STRING:         readString,
 	RDB_TYPE_LIST_QUICKLIST: readList,
+	RDB_TYPE_SET_INTSET:     readIntSet,
+	RDB_TYPE_SET:            readSet,
 }
 
 func readRdbLength(f *os.File, b byte) (len uint64, isInt bool) {
@@ -120,5 +122,42 @@ func readZiplist(f *os.File, n int) {
 		fmt.Println(zl)
 		zlbytes := binary.LittleEndian.Uint32(zl)
 		fmt.Printf("zlbytes:%d", zlbytes)
+	}
+}
+
+func readIntSet(f *os.File, n uint64) {
+	lenFlag, _ := ReadBytes(f, 1)
+	length, isInt := readRdbLength(f, lenFlag[0])
+	if isInt {
+		fmt.Printf("intset length:%d\n", length)
+	} else {
+		b, _ := ReadBytes(f, length)
+		fmt.Printf("intset bytes:%v\n", b)
+	}
+}
+
+func readSet(f *os.File, n uint64) {
+	hashNode, _ := ReadBytes(f, 1)
+	fmt.Printf("hashNode %d\n", hashNode[0])
+	readHashNode(f, int(hashNode[0]))
+	// length, isInt := readRdbLength(f, lenFlag[0])
+	// if isInt {
+	// 	fmt.Printf("set length:%d\n", length)
+	// } else {
+	// 	b, _ := ReadBytes(f, length)
+	// 	fmt.Printf("set bytes:%v\n", b)
+	// }
+}
+
+func readHashNode(f *os.File, count int) {
+	for i := 0; i < count; i++ {
+		lenFlag, _ := ReadBytes(f, 1)
+		len, isInt := readRdbLength(f, lenFlag[0])
+		if isInt {
+			fmt.Printf("hash value:%d\n", len)
+		} else {
+			b, _ := ReadBytes(f, len)
+			fmt.Printf("hash value:%s\n", b)
+		}
 	}
 }

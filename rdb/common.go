@@ -69,8 +69,6 @@ func readValue(f *os.File, valueType int) {
 			v, _ := ReadBytes(f, length)
 			fmt.Printf("value:%s\n", v)
 		}
-	} else if valueType == RDB_TYPE_LIST_QUICKLIST {
-
 	}
 	m[valueType](f, length)
 }
