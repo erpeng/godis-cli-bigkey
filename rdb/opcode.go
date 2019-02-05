@@ -33,5 +33,34 @@ func readAux(f *os.File) {
 			fmt.Printf("%s ", b)
 		}
 	}
-	fmt.Println()
+}
+
+func readDbNum(f *os.File) {
+	lenFlag, _ := ReadBytes(f, 1)
+	len, _ := readRdbLength(f, lenFlag[0])
+	fmt.Printf("db:%d\n", len)
+}
+
+func readDbSize(f *os.File) {
+	for i := 1; i < 3; i++ {
+		lenFlag, _ := ReadBytes(f, 1)
+		len, _ := readRdbLength(f, lenFlag[0])
+		if i == 1 {
+			fmt.Printf("db-size:%d\n", len)
+		}
+		if i == 2 {
+			fmt.Printf("expire-size:%d\n", len)
+		}
+	}
+}
+
+func readEOF(f *os.File) {
+	len, _ := ReadBytes(f, 1)
+	fmt.Printf("EOF:%d\n", len[0])
+}
+
+func readIdle(f *os.File) {
+	lenFlag, _ := ReadBytes(f, 1)
+	len, _ := readRdbLength(f, lenFlag[0])
+	fmt.Printf("%d\n", len)
 }

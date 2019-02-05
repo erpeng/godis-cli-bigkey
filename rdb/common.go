@@ -35,23 +35,26 @@ func Load(f *os.File) {
 			lfu, _ := ReadBytes(f, rdbLfuLen)
 			fmt.Println(binary.LittleEndian.Uint16(lfu))
 		} else if b[0] == RDB_OPCODE_IDLE {
-
+			readIdle(f)
 		} else if b[0] == RDB_OPCODE_AUX {
 			readAux(f)
 		} else if b[0] == RDB_OPCODE_EOF {
+			readEOF(f)
 		} else if b[0] == RDB_OPCODE_EXPIRETIME {
+			//new rdb version don't use this type
 		} else if b[0] == RDB_OPCODE_RESIZEDB {
+			readDbSize(f)
 		} else if b[0] == RDB_OPCODE_SELECTDB {
+			readDbNum(f)
+		} else {
+			valueType := int(b[0])
+			b, _ := ReadBytes(f, 1)
+			len, _ := readRdbLength(f, b[0])
+			key := readKey(f, len)
+			fmt.Println(key)
+			b, _ = ReadBytes(f, 1)
+			len, _ = readRdbLength(f, b[0])
+			m[valueType](f, len)
 		}
-
-		// valueType := int(b[0])
-		// b, _ := ReadBytes(f, 1)
-		// len := readRdbLength(f, b[0])
-		// key := readKey(f, len)
-		// fmt.Println(key)
-		// b, _ = ReadBytes(f, 1)
-		// len = readRdbLength(f, b[0])
-		// //m[valueType](f, len)
-
 	}
 }
