@@ -2,6 +2,7 @@ package rdb
 
 import (
 	"encoding/binary"
+	"fmt"
 	"os"
 )
 
@@ -51,7 +52,8 @@ const (
 type readFunc func(f *os.File, l uint64)
 
 var m = map[int]readFunc{
-	RDB_TYPE_STRING: readString,
+	RDB_TYPE_STRING:         readString,
+	RDB_TYPE_LIST_QUICKLIST: readList,
 }
 
 func readRdbLength(f *os.File, b byte) (len uint64, isInt bool) {
@@ -101,4 +103,22 @@ func readKey(f *os.File, l uint64) string {
 
 func readString(f *os.File, l uint64) {
 	ReadBytes(f, l)
+}
+
+func readList(f *os.File, l uint64) {
+	nodeCount, _ := ReadBytes(f, 1)
+	fmt.Printf("listCount:%d\n", nodeCount[0])
+	length, _ := ReadBytes(f, 1)
+	fmt.Printf("ziplist length:%d\n", length[0])
+	ReadBytes(f, uint64(length[0]))
+	//readZiplist(f, int(nodeCount[0]))
+}
+
+func readZiplist(f *os.File, n int) {
+	for i := 0; i < n; i++ {
+		zl, _ := ReadBytes(f, 4)
+		fmt.Println(zl)
+		zlbytes := binary.LittleEndian.Uint32(zl)
+		fmt.Printf("zlbytes:%d", zlbytes)
+	}
 }

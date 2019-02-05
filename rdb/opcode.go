@@ -55,8 +55,8 @@ func readDbSize(f *os.File) {
 }
 
 func readEOF(f *os.File) {
-	len, _ := ReadBytes(f, 1)
-	fmt.Printf("EOF:%d\n", len[0])
+	len, _ := ReadBytes(f, 8)
+	fmt.Printf("EOF checksum:%v\n", len)
 }
 
 func readIdle(f *os.File) {

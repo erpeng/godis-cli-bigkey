@@ -48,13 +48,29 @@ func Load(f *os.File) {
 			readDbNum(f)
 		} else {
 			valueType := int(b[0])
+			fmt.Printf("valueType:%d\n", valueType)
 			b, _ := ReadBytes(f, 1)
 			len, _ := readRdbLength(f, b[0])
 			key := readKey(f, len)
-			fmt.Println(key)
-			b, _ = ReadBytes(f, 1)
-			len, _ = readRdbLength(f, b[0])
-			m[valueType](f, len)
+			fmt.Printf("key:%s\n", key)
+			readValue(f, valueType)
 		}
 	}
+}
+
+func readValue(f *os.File, valueType int) {
+	var length uint64
+	if valueType == RDB_TYPE_STRING {
+		b, _ := ReadBytes(f, 1)
+		length, isInt := readRdbLength(f, b[0])
+		if isInt {
+			fmt.Printf("value:%d\n", length)
+		} else {
+			v, _ := ReadBytes(f, length)
+			fmt.Printf("value:%s\n", v)
+		}
+	} else if valueType == RDB_TYPE_LIST_QUICKLIST {
+
+	}
+	m[valueType](f, length)
 }
