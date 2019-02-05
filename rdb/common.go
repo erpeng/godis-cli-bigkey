@@ -37,20 +37,21 @@ func Load(f *os.File) {
 		} else if b[0] == RDB_OPCODE_IDLE {
 
 		} else if b[0] == RDB_OPCODE_AUX {
+			readAux(f)
 		} else if b[0] == RDB_OPCODE_EOF {
 		} else if b[0] == RDB_OPCODE_EXPIRETIME {
 		} else if b[0] == RDB_OPCODE_RESIZEDB {
 		} else if b[0] == RDB_OPCODE_SELECTDB {
 		}
 
-		valueType := int(b[0])
-		b, _ := ReadBytes(f, 1)
-		len := readRdbLength(f, b[0])
-		key := readKey(f, len)
-		fmt.Println(key)
-		b, _ = ReadBytes(f, 1)
-		len = readRdbLength(f, b[0])
-		m[valueType](f, len)
+		// valueType := int(b[0])
+		// b, _ := ReadBytes(f, 1)
+		// len := readRdbLength(f, b[0])
+		// key := readKey(f, len)
+		// fmt.Println(key)
+		// b, _ = ReadBytes(f, 1)
+		// len = readRdbLength(f, b[0])
+		// //m[valueType](f, len)
 
 	}
 }

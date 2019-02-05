@@ -1,5 +1,10 @@
 package rdb
 
+import (
+	"fmt"
+	"os"
+)
+
 const (
 	RDB_OPCODE_IDLE = iota + 248
 	RDB_OPCODE_FREQ
@@ -16,3 +21,17 @@ const (
 	rdbMagicVersionLen = 4
 	rdbLfuLen          = 1
 )
+
+func readAux(f *os.File) {
+	for i := 1; i < 3; i++ {
+		lenFlag, _ := ReadBytes(f, 1)
+		len, isInt := readRdbLength(f, lenFlag[0])
+		if isInt {
+			fmt.Printf("%d ", len)
+		} else {
+			b, _ := ReadBytes(f, len)
+			fmt.Printf("%s ", b)
+		}
+	}
+	fmt.Println()
+}

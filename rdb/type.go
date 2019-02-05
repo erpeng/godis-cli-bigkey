@@ -54,7 +54,7 @@ var m = map[int]readFunc{
 	RDB_TYPE_STRING: readString,
 }
 
-func readRdbLength(f *os.File, b byte) (len uint64) {
+func readRdbLength(f *os.File, b byte) (len uint64, isInt bool) {
 	flag := (int(b) & 0xC0) >> 6
 	if flag == RDB_6BITLEN {
 		len = uint64(int(b) & 0x3F)
@@ -62,18 +62,36 @@ func readRdbLength(f *os.File, b byte) (len uint64) {
 		next, _ := ReadBytes(f, 1)
 		len = uint64(((int(b) & 0x3F) << 8) | int(next[0]))
 	} else if flag == RDB_ENCVAL {
-
+		isInt = true
+		len = readRdbIntLength(f, b)
 	} else if b == RDB_32BITLEN {
-		next, _ := ReadBytes(f, rdb32bitlen)
-		len = binary.LittleEndian.Uint64(next)
+		next, _ := ReadBytes(f, rdb32bitlen-1)
+		len = uint64(binary.LittleEndian.Uint32(next))
 	} else if b == RDB_64BITLEN {
-		next, _ := ReadBytes(f, rdb64bitlen)
+		next, _ := ReadBytes(f, rdb64bitlen-1)
 		len = binary.LittleEndian.Uint64(next)
 	} else {
 		panic("Unknown len")
 	}
 	return
 
+}
+
+func readRdbIntLength(f *os.File, b byte) (len uint64) {
+	flag := (int(b) & 0x03)
+	if flag == RDB_ENC_INT8 {
+		next, _ := ReadBytes(f, 1)
+		len = uint64(int(next[0]))
+	} else if flag == RDB_ENC_INT16 {
+		next, _ := ReadBytes(f, rdbenc16len-1)
+		len = uint64(binary.LittleEndian.Uint16(next))
+	} else if flag == RDB_ENC_INT32 {
+		next, _ := ReadBytes(f, rdbenc32len-1)
+		len = uint64(binary.LittleEndian.Uint32(next))
+	} else if flag == RDB_ENC_LZF {
+
+	}
+	return
 }
 
 func readKey(f *os.File, l uint64) string {
