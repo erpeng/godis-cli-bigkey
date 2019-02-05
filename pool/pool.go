@@ -11,48 +11,70 @@ type element struct {
 }
 
 var pool []*element
+var poolLength int
 
-func initLen(l uint64) {
-	pool = make([]*element, l)
+func initLen(l int) {
+	poolLength = l
+	pool = make([]*element, 0, l)
 }
 
 func insert(e *element) {
 	len := len(pool)
-	//empty
-	if pool[0] == nil {
-		pool[0] = e
-		return
-		//full and e is least
-	} else if pool[len-1] != nil && pool[0].valueSize > e.valueSize {
-		return
-		//full and e is biggest
-	} else if pool[len-1] != nil && pool[len-1].valueSize < e.valueSize {
-		//pool[0 : len-1] = pool[1:len]
-		pool[len-1] = e
-		return
-	}
 
 	//find the position
 	pos := find(e, pool)
-	if pos == 0 && pool[len-1] == nil {
-		//pool[1:len] = pool[0 : len-1]
-		pool[0] = e
-		return
-	} else {
 
+	var poolTmp []*element
+	//empty
+	if len == 0 {
+		pool = append(pool, e)
+		return
+		//full and e is least
+	} else if len == poolLength && pos == 0 {
+		return
+		//full and e is biggest
+	} else if len == poolLength && pos == len {
+		//pool[0 : len-1] = pool[1:len]
+		poolTmp = append(poolTmp, pool[1:len]...)
+		poolTmp = append(poolTmp, e)
+		pool = poolTmp
+		return
+		//full ane e is middle
+	} else if len == poolLength {
+
+		poolTmp = append(poolTmp, pool[1:pos]...)
+		poolTmp = append(poolTmp, e)
+		poolTmp = append(poolTmp, pool[pos:len]...)
+		pool = poolTmp
+		//not full
+	} else if len != poolLength && pos == 0 {
+		poolTmp = append(poolTmp, e)
+		poolTmp = append(poolTmp, pool...)
+
+		pool = poolTmp
+		//not full
+	} else if len != poolLength && pos == len {
+		pool = append(pool, e)
+	} else if len != poolLength {
+		poolTmp = append(poolTmp, pool[0:pos]...)
+		poolTmp = append(poolTmp, e)
+		poolTmp = append(poolTmp, pool[pos:len]...)
+		pool = poolTmp
 	}
 
 }
 
-func find(e *element, pool []*element) (pos uint64) {
+func find(e *element, pool []*element) (pos int) {
+	index := 0
 	for i, ele := range pool {
 		if e.valueSize < ele.valueSize {
-			pos = uint64(i)
+			pos = i
 			break
 		}
+		index++
 	}
-	// if i == len(pool)-1 {
-	// 	return i
-	// }
-	return
+	if index == len(pool) {
+		return len(pool)
+	}
+	return pos
 }
