@@ -28,6 +28,8 @@ const (
 	rdbenc8len  = 2
 	rdbenc16len = 3
 	rdbenc32len = 5
+
+	rdbzsetscorelen = 8
 )
 
 const (
@@ -56,6 +58,8 @@ var m = map[int]readFunc{
 	RDB_TYPE_LIST_QUICKLIST: readList,
 	RDB_TYPE_SET_INTSET:     readIntSet,
 	RDB_TYPE_SET:            readSet,
+	RDB_TYPE_ZSET_ZIPLIST:   readZsetZiplist,
+	RDB_TYPE_ZSET_2:         readZset,
 }
 
 func readRdbLength(f *os.File, b byte) (len uint64, isInt bool) {
@@ -66,8 +70,7 @@ func readRdbLength(f *os.File, b byte) (len uint64, isInt bool) {
 		next, _ := ReadBytes(f, 1)
 		len = uint64(((int(b) & 0x3F) << 8) | int(next[0]))
 	} else if flag == RDB_ENCVAL {
-		isInt = true
-		len = readRdbIntLength(f, b)
+		len, isInt = readRdbIntLength(f, b)
 	} else if b == RDB_32BITLEN {
 		next, _ := ReadBytes(f, rdb32bitlen-1)
 		len = uint64(binary.LittleEndian.Uint32(next))
@@ -81,8 +84,9 @@ func readRdbLength(f *os.File, b byte) (len uint64, isInt bool) {
 
 }
 
-func readRdbIntLength(f *os.File, b byte) (len uint64) {
+func readRdbIntLength(f *os.File, b byte) (len uint64, isInt bool) {
 	flag := (int(b) & 0x03)
+	isInt = true
 	if flag == RDB_ENC_INT8 {
 		next, _ := ReadBytes(f, 1)
 		len = uint64(int(next[0]))
@@ -93,9 +97,23 @@ func readRdbIntLength(f *os.File, b byte) (len uint64) {
 		next, _ := ReadBytes(f, rdbenc32len-1)
 		len = uint64(binary.LittleEndian.Uint32(next))
 	} else if flag == RDB_ENC_LZF {
-
+		isInt = false
+		len = readCompressLen(f)
+		readOriginalLen(f)
 	}
 	return
+}
+
+func readCompressLen(f *os.File) uint64 {
+	b, _ := ReadBytes(f, 1)
+	len, _ := readRdbLength(f, b[0])
+	return len
+}
+
+func readOriginalLen(f *os.File) uint64 {
+	b, _ := ReadBytes(f, 1)
+	len, _ := readRdbLength(f, b[0])
+	return len
 }
 
 func readKey(f *os.File, l uint64) string {
@@ -108,11 +126,13 @@ func readString(f *os.File, l uint64) {
 }
 
 func readList(f *os.File, l uint64) {
-	nodeCount, _ := ReadBytes(f, 1)
-	fmt.Printf("listCount:%d\n", nodeCount[0])
-	length, _ := ReadBytes(f, 1)
-	fmt.Printf("ziplist length:%d\n", length[0])
-	ReadBytes(f, uint64(length[0]))
+	ncFlag, _ := ReadBytes(f, 1)
+	nodeCount, _ := readRdbLength(f, ncFlag[0])
+	fmt.Printf("listCount:%d\n", nodeCount)
+	lenFlag, _ := ReadBytes(f, 1)
+	len, _ := readRdbLength(f, lenFlag[0])
+	fmt.Printf("ziplist length:%d\n", len)
+	ReadBytes(f, uint64(len))
 	//readZiplist(f, int(nodeCount[0]))
 }
 
@@ -159,5 +179,26 @@ func readHashNode(f *os.File, count int) {
 			b, _ := ReadBytes(f, len)
 			fmt.Printf("hash value:%s\n", b)
 		}
+	}
+}
+
+func readZsetZiplist(f *os.File, l uint64) {
+	lenFlag, _ := ReadBytes(f, 1)
+	len, _ := readRdbLength(f, lenFlag[0])
+
+	fmt.Printf("zset ziplist length:%d\n", len)
+	ReadBytes(f, uint64(len))
+}
+
+func readZset(f *os.File, count uint64) {
+	ncFlag, _ := ReadBytes(f, 1)
+	nodeCount, _ := readRdbLength(f, ncFlag[0])
+	fmt.Printf("zset skip list node:%d\n", nodeCount)
+	var i uint64
+	for i = 0; i < nodeCount; i++ {
+		lenFlag, _ := ReadBytes(f, 1)
+		len, _ := readRdbLength(f, lenFlag[0])
+		ReadBytes(f, uint64(len))
+		ReadBytes(f, rdbzsetscorelen)
 	}
 }
