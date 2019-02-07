@@ -197,8 +197,10 @@ func readZset(f *os.File, count uint64) {
 	var i uint64
 	for i = 0; i < nodeCount; i++ {
 		lenFlag, _ := ReadBytes(f, 1)
-		len, _ := readRdbLength(f, lenFlag[0])
-		ReadBytes(f, uint64(len))
+		len, isInt := readRdbLength(f, lenFlag[0])
+		if !isInt {
+			ReadBytes(f, uint64(len))
+		}
 		ReadBytes(f, rdbzsetscorelen)
 	}
 }
