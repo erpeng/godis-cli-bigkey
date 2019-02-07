@@ -56,7 +56,7 @@ func Load(f *os.File) {
 			valueType := int(b[0])
 			fmt.Printf("valueType:%d\n", valueType)
 			b, _ := ReadBytes(f, 1)
-			len, _ := readRdbLength(f, b[0])
+			len, _, _ := readRdbLength(f, b[0])
 			key := readKey(f, len)
 			fmt.Printf("key:%s\n", key)
 			valueLen := readValue(f, valueType)
@@ -72,15 +72,6 @@ func Load(f *os.File) {
 
 func readValue(f *os.File, valueType int) (len uint64) {
 	var length uint64
-	if valueType == RDB_TYPE_STRING {
-		b, _ := ReadBytes(f, 1)
-		length, isInt := readRdbLength(f, b[0])
-		if isInt {
-			fmt.Printf("value:%d\n", length)
-		} else {
-			v, _ := ReadBytes(f, length)
-			fmt.Printf("value:%s\n", v)
-		}
-	}
-	m[valueType](f, length)
+	m[valueType](f, &length)
+	return length
 }

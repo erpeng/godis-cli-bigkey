@@ -25,7 +25,7 @@ const (
 func readAux(f *os.File) {
 	for i := 1; i < 3; i++ {
 		lenFlag, _ := ReadBytes(f, 1)
-		len, isInt := readRdbLength(f, lenFlag[0])
+		len, isInt, _ := readRdbLength(f, lenFlag[0])
 		if isInt {
 			fmt.Printf("%d ", len)
 		} else {
@@ -37,14 +37,14 @@ func readAux(f *os.File) {
 
 func readDbNum(f *os.File) {
 	lenFlag, _ := ReadBytes(f, 1)
-	len, _ := readRdbLength(f, lenFlag[0])
+	len, _, _ := readRdbLength(f, lenFlag[0])
 	fmt.Printf("db:%d\n", len)
 }
 
 func readDbSize(f *os.File) {
 	for i := 1; i < 3; i++ {
 		lenFlag, _ := ReadBytes(f, 1)
-		len, _ := readRdbLength(f, lenFlag[0])
+		len, _, _ := readRdbLength(f, lenFlag[0])
 		if i == 1 {
 			fmt.Printf("db-size:%d\n", len)
 		}
@@ -61,7 +61,7 @@ func readEOF(f *os.File) {
 
 func readIdle(f *os.File) (lru uint64) {
 	lenFlag, _ := ReadBytes(f, 1)
-	len, _ := readRdbLength(f, lenFlag[0])
+	len, _, _ := readRdbLength(f, lenFlag[0])
 	fmt.Printf("%d\n", len)
 	return len
 }

@@ -51,7 +51,7 @@ const (
 	RDB_TYPE_STREAM_LISTPACKS
 )
 
-type readFunc func(f *os.File, l uint64)
+type readFunc func(f *os.File, l *uint64)
 
 var m = map[int]readFunc{
 	RDB_TYPE_STRING:         readString,
@@ -64,7 +64,7 @@ var m = map[int]readFunc{
 	RDB_TYPE_HASH:           readHash,
 }
 
-func readRdbLength(f *os.File, b byte) (len uint64, isInt bool) {
+func readRdbLength(f *os.File, b byte) (len uint64, isInt bool, intLen uint64) {
 	flag := (int(b) & 0xC0) >> 6
 	if flag == RDB_6BITLEN {
 		len = uint64(int(b) & 0x3F)
@@ -72,7 +72,7 @@ func readRdbLength(f *os.File, b byte) (len uint64, isInt bool) {
 		next, _ := ReadBytes(f, 1)
 		len = uint64(((int(b) & 0x3F) << 8) | int(next[0]))
 	} else if flag == RDB_ENCVAL {
-		len, isInt = readRdbIntLength(f, b)
+		len, isInt, intLen = readRdbIntLength(f, b)
 	} else if b == RDB_32BITLEN {
 		next, _ := ReadBytes(f, rdb32bitlen-1)
 		len = uint64(binary.LittleEndian.Uint32(next))
@@ -86,18 +86,21 @@ func readRdbLength(f *os.File, b byte) (len uint64, isInt bool) {
 
 }
 
-func readRdbIntLength(f *os.File, b byte) (len uint64, isInt bool) {
+func readRdbIntLength(f *os.File, b byte) (len uint64, isInt bool, intLen uint64) {
 	flag := (int(b) & 0x03)
 	isInt = true
 	if flag == RDB_ENC_INT8 {
 		next, _ := ReadBytes(f, 1)
 		len = uint64(int(next[0]))
+		intLen = rdbenc8len - 1
 	} else if flag == RDB_ENC_INT16 {
 		next, _ := ReadBytes(f, rdbenc16len-1)
 		len = uint64(binary.LittleEndian.Uint16(next))
+		intLen = rdbenc16len - 1
 	} else if flag == RDB_ENC_INT32 {
 		next, _ := ReadBytes(f, rdbenc32len-1)
 		len = uint64(binary.LittleEndian.Uint32(next))
+		intLen = rdbenc32len - 1
 	} else if flag == RDB_ENC_LZF {
 		isInt = false
 		len = readCompressLen(f)
@@ -108,13 +111,13 @@ func readRdbIntLength(f *os.File, b byte) (len uint64, isInt bool) {
 
 func readCompressLen(f *os.File) uint64 {
 	b, _ := ReadBytes(f, 1)
-	len, _ := readRdbLength(f, b[0])
+	len, _, _ := readRdbLength(f, b[0])
 	return len
 }
 
 func readOriginalLen(f *os.File) uint64 {
 	b, _ := ReadBytes(f, 1)
-	len, _ := readRdbLength(f, b[0])
+	len, _, _ := readRdbLength(f, b[0])
 	return len
 }
 
@@ -123,23 +126,34 @@ func readKey(f *os.File, l uint64) string {
 	return string(k)
 }
 
-func readString(f *os.File, l uint64) {
-	ReadBytes(f, l)
+func readString(f *os.File, l *uint64) {
+	b, _ := ReadBytes(f, 1)
+	length, isInt, intLen := readRdbLength(f, b[0])
+	if isInt {
+		*l = intLen
+		fmt.Printf("value:%d\n", length)
+	} else {
+		v, _ := ReadBytes(f, length)
+		*l = length
+		fmt.Printf("value:%s\n", v)
+	}
 }
 
-func readList(f *os.File, l uint64) {
+func readList(f *os.File, l *uint64) {
 	ncFlag, _ := ReadBytes(f, 1)
-	nodeCount, _ := readRdbLength(f, ncFlag[0])
+	nodeCount, _, _ := readRdbLength(f, ncFlag[0])
 	fmt.Printf("listCount:%d\n", nodeCount)
+	//zipList之后有一个ziplist总体长度的字段
 	lenFlag, _ := ReadBytes(f, 1)
-	len, _ := readRdbLength(f, lenFlag[0])
+	len, _, _ := readRdbLength(f, lenFlag[0])
+	*l = len
 	fmt.Printf("ziplist length:%d\n", len)
 	ReadBytes(f, uint64(len))
 	//readZiplist(f, int(nodeCount[0]))
 }
 
-func readZiplist(f *os.File, n int) {
-	for i := 0; i < n; i++ {
+func readZiplist(f *os.File, n *int) {
+	for i := 0; i < *n; i++ {
 		zl, _ := ReadBytes(f, 4)
 		fmt.Println(zl)
 		zlbytes := binary.LittleEndian.Uint32(zl)
@@ -147,86 +161,90 @@ func readZiplist(f *os.File, n int) {
 	}
 }
 
-func readIntSet(f *os.File, n uint64) {
+func readIntSet(f *os.File, n *uint64) {
 	lenFlag, _ := ReadBytes(f, 1)
-	length, isInt := readRdbLength(f, lenFlag[0])
+	length, isInt, intlen := readRdbLength(f, lenFlag[0])
 	if isInt {
 		fmt.Printf("intset length:%d\n", length)
+		*n = intlen
 	} else {
 		b, _ := ReadBytes(f, length)
+		*n = length
 		fmt.Printf("intset bytes:%v\n", b)
 	}
 }
 
-func readSet(f *os.File, n uint64) {
+func readSet(f *os.File, n *uint64) {
 	hashNode, _ := ReadBytes(f, 1)
 	fmt.Printf("hashNode %d\n", hashNode[0])
-	readHashNode(f, int(hashNode[0]))
-	// length, isInt := readRdbLength(f, lenFlag[0])
-	// if isInt {
-	// 	fmt.Printf("set length:%d\n", length)
-	// } else {
-	// 	b, _ := ReadBytes(f, length)
-	// 	fmt.Printf("set bytes:%v\n", b)
-	// }
+	readHashNode(f, int(hashNode[0]), n)
 }
 
-func readHashNode(f *os.File, count int) {
+func readHashNode(f *os.File, count int, n *uint64) {
+	var length uint64
 	for i := 0; i < count; i++ {
 		lenFlag, _ := ReadBytes(f, 1)
-		len, isInt := readRdbLength(f, lenFlag[0])
+		len, isInt, intLen := readRdbLength(f, lenFlag[0])
 		if isInt {
 			fmt.Printf("hash value:%d\n", len)
+			length += intLen
 		} else {
 			b, _ := ReadBytes(f, len)
 			fmt.Printf("hash value:%s\n", b)
+			length += len
 		}
 	}
+	*n = length
 }
 
-func readZsetZiplist(f *os.File, l uint64) {
+func readZsetZiplist(f *os.File, l *uint64) {
 	lenFlag, _ := ReadBytes(f, 1)
-	len, _ := readRdbLength(f, lenFlag[0])
-
+	len, _, _ := readRdbLength(f, lenFlag[0])
+	*l = len
 	fmt.Printf("zset ziplist length:%d\n", len)
 	ReadBytes(f, uint64(len))
 }
 
-func readZset(f *os.File, count uint64) {
+func readZset(f *os.File, length *uint64) {
 	ncFlag, _ := ReadBytes(f, 1)
-	nodeCount, _ := readRdbLength(f, ncFlag[0])
+	nodeCount, _, _ := readRdbLength(f, ncFlag[0])
 	fmt.Printf("zset skip list node:%d\n", nodeCount)
 	var i uint64
 	for i = 0; i < nodeCount; i++ {
 		lenFlag, _ := ReadBytes(f, 1)
-		len, isInt := readRdbLength(f, lenFlag[0])
-		if !isInt {
+		len, isInt, intLen := readRdbLength(f, lenFlag[0])
+		if isInt {
+			*length += intLen
+		} else {
 			ReadBytes(f, uint64(len))
+			*length += len
 		}
 		ReadBytes(f, rdbzsetscorelen)
+		*length += rdbzsetscorelen
 	}
 }
 
-func readHashZiplist(f *os.File, l uint64) {
+func readHashZiplist(f *os.File, l *uint64) {
 	lenFlag, _ := ReadBytes(f, 1)
-	len, _ := readRdbLength(f, lenFlag[0])
-
+	len, _, _ := readRdbLength(f, lenFlag[0])
+	*l = len
 	fmt.Printf("hash ziplist length:%d\n", len)
 	ReadBytes(f, uint64(len))
 }
 
-func readHash(f *os.File, count uint64) {
+func readHash(f *os.File, l *uint64) {
 	ncFlag, _ := ReadBytes(f, 1)
-	nodeCount, _ := readRdbLength(f, ncFlag[0])
+	nodeCount, _, _ := readRdbLength(f, ncFlag[0])
 	fmt.Printf("hash dict node:%d\n", nodeCount)
 	var i uint64
 	for i = 0; i < 2*nodeCount; i++ {
 		lenFlag, _ := ReadBytes(f, 1)
-		len, isInt := readRdbLength(f, lenFlag[0])
-		if !isInt {
+		len, isInt, intLen := readRdbLength(f, lenFlag[0])
+		if isInt {
+			*l += intLen
+		} else {
 			ReadBytes(f, uint64(len))
-			//b, _ := ReadBytes(f, uint64(len))
-			//fmt.Printf("hash :%s\n", b)
+			*l += len
 		}
 	}
 }
