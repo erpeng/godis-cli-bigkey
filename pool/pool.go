@@ -86,7 +86,7 @@ func find(e *Element, pool []*Element) (pos int) {
 //PrintPool print pool content
 func PrintPool() {
 	for _, ele := range pool {
-		fmt.Printf("key:%s,valueSize:%d,valueType:%d", ele.Key, ele.ValueSize, ele.ValueType)
+		fmt.Printf("key:%s,valueSize:%d,valueType:%d,", ele.Key, ele.ValueSize, ele.ValueType)
 		fmt.Printf("expireTime:%d,lfu:%d,lru:%d\n", ele.ExpireTime, ele.Lfu, ele.Lru)
 	}
 }
