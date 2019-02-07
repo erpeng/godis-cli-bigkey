@@ -60,6 +60,8 @@ var m = map[int]readFunc{
 	RDB_TYPE_SET:            readSet,
 	RDB_TYPE_ZSET_ZIPLIST:   readZsetZiplist,
 	RDB_TYPE_ZSET_2:         readZset,
+	RDB_TYPE_HASH_ZIPLIST:   readHashZiplist,
+	RDB_TYPE_HASH:           readHash,
 }
 
 func readRdbLength(f *os.File, b byte) (len uint64, isInt bool) {
@@ -202,5 +204,29 @@ func readZset(f *os.File, count uint64) {
 			ReadBytes(f, uint64(len))
 		}
 		ReadBytes(f, rdbzsetscorelen)
+	}
+}
+
+func readHashZiplist(f *os.File, l uint64) {
+	lenFlag, _ := ReadBytes(f, 1)
+	len, _ := readRdbLength(f, lenFlag[0])
+
+	fmt.Printf("hash ziplist length:%d\n", len)
+	ReadBytes(f, uint64(len))
+}
+
+func readHash(f *os.File, count uint64) {
+	ncFlag, _ := ReadBytes(f, 1)
+	nodeCount, _ := readRdbLength(f, ncFlag[0])
+	fmt.Printf("hash dict node:%d\n", nodeCount)
+	var i uint64
+	for i = 0; i < 2*nodeCount; i++ {
+		lenFlag, _ := ReadBytes(f, 1)
+		len, isInt := readRdbLength(f, lenFlag[0])
+		if !isInt {
+			ReadBytes(f, uint64(len))
+			//b, _ := ReadBytes(f, uint64(len))
+			//fmt.Printf("hash :%s\n", b)
+		}
 	}
 }
