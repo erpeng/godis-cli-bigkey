@@ -28,19 +28,20 @@ func EqualBytes(b []byte, b1 []byte) bool {
 //Load load a rdb file
 func Load(f *os.File) {
 	var expireInt uint64
-	var lfu uint16
-	var lru uint64
+	var lfuInt uint16
+	var lruInt uint64
 	for b, err := ReadBytes(f, 1); err == nil; b, err = ReadBytes(f, 1) {
 
 		if b[0] == RDB_OPCODE_EXPIRETIME_MS {
 			expire, _ := ReadBytes(f, rdbExpireTimeLen)
-			expireInt := binary.LittleEndian.Uint64(expire)
+			expireInt = binary.LittleEndian.Uint64(expire)
 			fmt.Println(expireInt)
 		} else if b[0] == RDB_OPCODE_FREQ {
 			lfu, _ := ReadBytes(f, rdbLfuLen)
-			fmt.Println(binary.LittleEndian.Uint16(lfu))
+			lfuInt = binary.LittleEndian.Uint16(lfu)
+			fmt.Println(lfuInt)
 		} else if b[0] == RDB_OPCODE_IDLE {
-			lru = readIdle(f)
+			lruInt = readIdle(f)
 		} else if b[0] == RDB_OPCODE_AUX {
 			readAux(f)
 		} else if b[0] == RDB_OPCODE_EOF {
@@ -60,11 +61,11 @@ func Load(f *os.File) {
 			fmt.Printf("key:%s\n", key)
 			valueLen := readValue(f, valueType)
 			ele := &pool.Element{ValueType: valueType, Key: key, ValueSize: valueLen,
-				ExpireTime: expireInt, Lfu: lfu, Lru: lru}
+				ExpireTime: expireInt, Lfu: lfuInt, Lru: lruInt}
 			pool.Insert(ele)
 			expireInt = 0
-			lfu = 0
-			lru = 0
+			lfuInt = 0
+			lruInt = 0
 		}
 	}
 }
