@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/erpeng/godis-cli-bigkey/pool"
 	"github.com/erpeng/godis-cli-bigkey/rdb"
 )
 
@@ -28,5 +29,7 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Printf("\rRdb Version:%s\n", string(b))
+	pool.InitLen(100)
 	rdb.Load(f)
+	pool.PrintPool()
 }

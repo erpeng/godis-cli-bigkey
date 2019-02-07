@@ -59,8 +59,9 @@ func readEOF(f *os.File) {
 	fmt.Printf("EOF checksum:%v\n", len)
 }
 
-func readIdle(f *os.File) {
+func readIdle(f *os.File) (lru uint64) {
 	lenFlag, _ := ReadBytes(f, 1)
 	len, _ := readRdbLength(f, lenFlag[0])
 	fmt.Printf("%d\n", len)
+	return len
 }

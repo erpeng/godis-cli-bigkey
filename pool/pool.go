@@ -1,30 +1,34 @@
 package pool
 
-//A Ele is a Item
-type element struct {
-	expireTime uint64
-	lru        uint64
-	lfu        uint64
-	key        string
-	valueType  string
-	valueSize  uint64
+import "fmt"
+
+//Element save redis key/value
+type Element struct {
+	ExpireTime uint64
+	Lru        uint64
+	Lfu        uint16
+	Key        string
+	ValueType  int
+	ValueSize  uint64
 }
 
-var pool []*element
+var pool []*Element
 var poolLength int
 
-func initLen(l int) {
+//InitLen pool length
+func InitLen(l int) {
 	poolLength = l
-	pool = make([]*element, 0, l)
+	pool = make([]*Element, 0, l)
 }
 
-func insert(e *element) {
+//Insert insert element
+func Insert(e *Element) {
 	len := len(pool)
 
 	//find the position
 	pos := find(e, pool)
 
-	var poolTmp []*element
+	var poolTmp []*Element
 	//empty
 	if len == 0 {
 		pool = append(pool, e)
@@ -64,10 +68,10 @@ func insert(e *element) {
 
 }
 
-func find(e *element, pool []*element) (pos int) {
+func find(e *Element, pool []*Element) (pos int) {
 	index := 0
 	for i, ele := range pool {
-		if e.valueSize < ele.valueSize {
+		if e.ValueSize < ele.ValueSize {
 			pos = i
 			break
 		}
@@ -77,4 +81,12 @@ func find(e *element, pool []*element) (pos int) {
 		return len(pool)
 	}
 	return pos
+}
+
+//PrintPool print pool content
+func PrintPool() {
+	for _, ele := range pool {
+		fmt.Printf("key:%s,valueSize:%d,valueType:%d", ele.Key, ele.ValueSize, ele.ValueType)
+		fmt.Printf("expireTime:%d,lfu:%d,lru:%d\n", ele.ExpireTime, ele.Lfu, ele.Lru)
+	}
 }
