@@ -12,8 +12,10 @@ import (
 func main() {
 	debug := flag.Bool("debug", false, "open debug mode")
 	topN := flag.Int("topn", 100, "output topn keys")
+	totalLen := flag.Bool("totallen", true, "get total len (key and meta) or only value len")
 	flag.Parse()
 	rdb.DEBUG = *debug
+	rdb.TOTALLEN = *totalLen
 	f, err := os.Open("./rdb.rdb")
 	if err != nil {
 		fmt.Printf("Open rdb file error:%v", err)

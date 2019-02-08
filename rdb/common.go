@@ -12,6 +12,9 @@ import (
 //DEBUG open debug mode
 var DEBUG bool
 
+//TOTALLEN output totallen(include key len and meta len)
+var TOTALLEN bool
+
 //ReadBytes read n bytes
 func ReadBytes(r io.Reader, n uint64) ([]byte, error) {
 	b := make([]byte, n)
@@ -58,10 +61,12 @@ func Load(f *os.File) {
 			valueType := int(b[0])
 			Printf("valueType:%d\n", valueType)
 			b, _ := ReadBytes(f, 1)
-			len, _, _ := readRdbLength(f, b[0])
+			len, _, metaLen := readRdbLength(f, b[0])
 			key := readKey(f, len)
 			Printf("key:%s\n", key)
 			valueLen := readValue(f, valueType)
+			AddLen(&valueLen, len)
+			AddLen(&valueLen, metaLen)
 			ele := &pool.Element{ValueType: valueType, Key: key, ValueSize: valueLen,
 				ExpireTime: expireInt, Lfu: lfuInt, Lru: lruInt}
 			pool.Insert(ele)
