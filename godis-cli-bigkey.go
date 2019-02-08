@@ -13,7 +13,7 @@ func main() {
 	debug := flag.Bool("debug", false, "open debug mode")
 	topN := flag.Int("topn", 100, "output topn keys")
 	flag.Parse()
-	rdb.DEBUG = debug
+	rdb.DEBUG = *debug
 	f, err := os.Open("./rdb.rdb")
 	if err != nil {
 		fmt.Printf("Open rdb file error:%v", err)
