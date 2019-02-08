@@ -3,12 +3,14 @@ package rdb
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"io"
 	"os"
 
 	"github.com/erpeng/godis-cli-bigkey/pool"
 )
+
+//DEBUG open debug mode
+var DEBUG bool
 
 //ReadBytes read n bytes
 func ReadBytes(r io.Reader, n uint64) ([]byte, error) {
@@ -35,11 +37,11 @@ func Load(f *os.File) {
 		if b[0] == RDB_OPCODE_EXPIRETIME_MS {
 			expire, _ := ReadBytes(f, rdbExpireTimeLen)
 			expireInt = binary.LittleEndian.Uint64(expire)
-			fmt.Println(expireInt)
+			Println(expireInt)
 		} else if b[0] == RDB_OPCODE_FREQ {
 			lfu, _ := ReadBytes(f, rdbLfuLen)
 			lfuInt = binary.LittleEndian.Uint16(lfu)
-			fmt.Println(lfuInt)
+			Println(lfuInt)
 		} else if b[0] == RDB_OPCODE_IDLE {
 			lruInt = readIdle(f)
 		} else if b[0] == RDB_OPCODE_AUX {
@@ -54,11 +56,11 @@ func Load(f *os.File) {
 			readDbNum(f)
 		} else {
 			valueType := int(b[0])
-			fmt.Printf("valueType:%d\n", valueType)
+			Printf("valueType:%d\n", valueType)
 			b, _ := ReadBytes(f, 1)
 			len, _, _ := readRdbLength(f, b[0])
 			key := readKey(f, len)
-			fmt.Printf("key:%s\n", key)
+			Printf("key:%s\n", key)
 			valueLen := readValue(f, valueType)
 			ele := &pool.Element{ValueType: valueType, Key: key, ValueSize: valueLen,
 				ExpireTime: expireInt, Lfu: lfuInt, Lru: lruInt}

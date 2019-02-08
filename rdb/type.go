@@ -131,23 +131,23 @@ func readString(f *os.File, l *uint64) {
 	length, isInt, intLen := readRdbLength(f, b[0])
 	if isInt {
 		*l = intLen
-		fmt.Printf("value:%d\n", length)
+		Printf("value:%d\n", length)
 	} else {
 		v, _ := ReadBytes(f, length)
 		*l = length
-		fmt.Printf("value:%s\n", v)
+		Printf("value:%s\n", v)
 	}
 }
 
 func readList(f *os.File, l *uint64) {
 	ncFlag, _ := ReadBytes(f, 1)
 	nodeCount, _, _ := readRdbLength(f, ncFlag[0])
-	fmt.Printf("listCount:%d\n", nodeCount)
+	Printf("listCount:%d\n", nodeCount)
 	//zipList之后有一个ziplist总体长度的字段
 	lenFlag, _ := ReadBytes(f, 1)
 	len, _, _ := readRdbLength(f, lenFlag[0])
 	*l = len
-	fmt.Printf("ziplist length:%d\n", len)
+	Printf("ziplist length:%d\n", len)
 	ReadBytes(f, uint64(len))
 	//readZiplist(f, int(nodeCount[0]))
 }
@@ -155,9 +155,9 @@ func readList(f *os.File, l *uint64) {
 func readZiplist(f *os.File, n *int) {
 	for i := 0; i < *n; i++ {
 		zl, _ := ReadBytes(f, 4)
-		fmt.Println(zl)
+		Println(zl)
 		zlbytes := binary.LittleEndian.Uint32(zl)
-		fmt.Printf("zlbytes:%d", zlbytes)
+		Printf("zlbytes:%d", zlbytes)
 	}
 }
 
@@ -165,18 +165,18 @@ func readIntSet(f *os.File, n *uint64) {
 	lenFlag, _ := ReadBytes(f, 1)
 	length, isInt, intlen := readRdbLength(f, lenFlag[0])
 	if isInt {
-		fmt.Printf("intset length:%d\n", length)
+		Printf("intset length:%d\n", length)
 		*n = intlen
 	} else {
 		b, _ := ReadBytes(f, length)
 		*n = length
-		fmt.Printf("intset bytes:%v\n", b)
+		Printf("intset bytes:%v\n", b)
 	}
 }
 
 func readSet(f *os.File, n *uint64) {
 	hashNode, _ := ReadBytes(f, 1)
-	fmt.Printf("hashNode %d\n", hashNode[0])
+	Printf("hashNode %d\n", hashNode[0])
 	readHashNode(f, int(hashNode[0]), n)
 }
 
@@ -186,11 +186,11 @@ func readHashNode(f *os.File, count int, n *uint64) {
 		lenFlag, _ := ReadBytes(f, 1)
 		len, isInt, intLen := readRdbLength(f, lenFlag[0])
 		if isInt {
-			fmt.Printf("hash value:%d\n", len)
+			Printf("hash value:%d\n", len)
 			length += intLen
 		} else {
 			b, _ := ReadBytes(f, len)
-			fmt.Printf("hash value:%s\n", b)
+			Printf("hash value:%s\n", b)
 			length += len
 		}
 	}
@@ -201,14 +201,14 @@ func readZsetZiplist(f *os.File, l *uint64) {
 	lenFlag, _ := ReadBytes(f, 1)
 	len, _, _ := readRdbLength(f, lenFlag[0])
 	*l = len
-	fmt.Printf("zset ziplist length:%d\n", len)
+	Printf("zset ziplist length:%d\n", len)
 	ReadBytes(f, uint64(len))
 }
 
 func readZset(f *os.File, length *uint64) {
 	ncFlag, _ := ReadBytes(f, 1)
 	nodeCount, _, _ := readRdbLength(f, ncFlag[0])
-	fmt.Printf("zset skip list node:%d\n", nodeCount)
+	Printf("zset skip list node:%d\n", nodeCount)
 	var i uint64
 	for i = 0; i < nodeCount; i++ {
 		lenFlag, _ := ReadBytes(f, 1)
@@ -228,14 +228,14 @@ func readHashZiplist(f *os.File, l *uint64) {
 	lenFlag, _ := ReadBytes(f, 1)
 	len, _, _ := readRdbLength(f, lenFlag[0])
 	*l = len
-	fmt.Printf("hash ziplist length:%d\n", len)
+	Printf("hash ziplist length:%d\n", len)
 	ReadBytes(f, uint64(len))
 }
 
 func readHash(f *os.File, l *uint64) {
 	ncFlag, _ := ReadBytes(f, 1)
 	nodeCount, _, _ := readRdbLength(f, ncFlag[0])
-	fmt.Printf("hash dict node:%d\n", nodeCount)
+	Printf("hash dict node:%d\n", nodeCount)
 	var i uint64
 	for i = 0; i < 2*nodeCount; i++ {
 		lenFlag, _ := ReadBytes(f, 1)
@@ -246,5 +246,19 @@ func readHash(f *os.File, l *uint64) {
 			ReadBytes(f, uint64(len))
 			*l += len
 		}
+	}
+}
+
+//Printf wrap fmt.Printf
+func Printf(format string, a ...interface{}) {
+	if DEBUG {
+		fmt.Printf(format, a...)
+	}
+}
+
+//Println wrap fmt.Println
+func Println(a ...interface{}) {
+	if DEBUG {
+		fmt.Println(a...)
 	}
 }

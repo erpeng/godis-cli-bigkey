@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
@@ -9,6 +10,10 @@ import (
 )
 
 func main() {
+	debug := flag.Bool("debug", false, "open debug mode")
+	topN := flag.Int("topn", 100, "output topn keys")
+	flag.Parse()
+	rdb.DEBUG = debug
 	f, err := os.Open("./rdb.rdb")
 	if err != nil {
 		fmt.Printf("Open rdb file error:%v", err)
@@ -29,7 +34,7 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Printf("\rRdb Version:%s\n", string(b))
-	pool.InitLen(100)
+	pool.InitLen(*topN)
 	rdb.Load(f)
 	pool.PrintPool()
 }
